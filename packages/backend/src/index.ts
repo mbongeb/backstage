@@ -63,4 +63,7 @@ backend.add(import('@backstage/plugin-kubernetes-backend'));
 backend.add(import('@backstage/plugin-notifications-backend'));
 backend.add(import('@backstage/plugin-signals-backend'));
 
+// Keycloak plugin for client management
+backend.add(import('@internal/plugin-keycloak-backend'));
+
 backend.start();
