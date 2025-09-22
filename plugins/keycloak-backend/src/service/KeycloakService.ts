@@ -17,6 +17,7 @@ export interface KeycloakClient {
   directAccessGrantsEnabled?: boolean;
   implicitFlowEnabled?: boolean;
   standardFlowEnabled?: boolean;
+  attributes?: Record<string, string>;
 }
 
 export interface KeycloakConfig {
@@ -122,6 +123,7 @@ export class KeycloakService {
         directAccessGrantsEnabled: clientData.directAccessGrantsEnabled || true,
         implicitFlowEnabled: clientData.implicitFlowEnabled || false,
         standardFlowEnabled: clientData.standardFlowEnabled || true,
+        attributes: clientData.attributes || {},
       };
 
       await this.axiosInstance.post(url, client, {
@@ -135,7 +137,7 @@ export class KeycloakService {
       if (error.response?.status === 409) {
         throw new Error(`Client ${clientData.clientId} already exists in realm ${realm}`);
       }
-      this.logger.error(`Failed to create Keycloak client: ${clientData.clientId}`, error as Error);
+      this.logger.error(`Failed to create Keycloak client: ${clientData.clientId}`,(error as Error));
       throw new Error(`Failed to create client: ${error.message}`);
     }
   }
@@ -183,6 +185,11 @@ export class KeycloakService {
       this.logger.error(`Failed to list Keycloak clients in realm: ${realm}`, error as Error);
       throw new Error(`Failed to list clients: ${error.message}`);
     }
+  }
+
+  async listClientsByCreator(realm: string, creator: string): Promise<any[]> {
+    const clients = await this.listClients(realm);
+    return (clients || []).filter((c: any) => c?.attributes?.createdBy === creator);
   }
 
   async updateClient(realm: string, id: string, clientData: Partial<KeycloakClient>): Promise<void> {

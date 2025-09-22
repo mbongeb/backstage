@@ -27,10 +27,14 @@ export interface KeycloakApi {
   createClient(client: KeycloakClient): Promise<void>;
   getClient(realm: string, clientId: string): Promise<KeycloakClient>;
   listClients(realm: string): Promise<KeycloakClient[]>;
+  listMyClients(realm: string): Promise<KeycloakClient[]>;
   updateClient(realm: string, id: string, client: Partial<KeycloakClient>): Promise<void>;
   deleteClient(realm: string, id: string): Promise<void>;
   getClientSecret(realm: string, id: string): Promise<string>;
   regenerateClientSecret(realm: string, id: string): Promise<string>;
+  listSecretHistory(realm: string, id: string): Promise<{
+    id: number; realm: string; client_id: string; created_by: string; action: string; secret_last4: string | null; created_at: string;
+  }[]>;
 }
 
 export class KeycloakApiClient implements KeycloakApi {
@@ -89,6 +93,20 @@ export class KeycloakApiClient implements KeycloakApi {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to list clients');
+    }
+
+    return await response.json();
+  }
+
+  async listMyClients(realm: string): Promise<KeycloakClient[]> {
+    const baseUrl = await this.getBaseUrl();
+    const response = await this.fetchApi.fetch(
+      `${baseUrl}/my-clients?realm=${realm}`,
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to list my clients');
     }
 
     return await response.json();
@@ -160,5 +178,17 @@ export class KeycloakApiClient implements KeycloakApi {
 
     const data = await response.json();
     return data.secret;
+  }
+
+  async listSecretHistory(realm: string, id: string) {
+    const baseUrl = await this.getBaseUrl();
+    const response = await this.fetchApi.fetch(
+      `${baseUrl}/clients/${id}/secret-history?realm=${realm}`,
+    );
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to list secret history');
+    }
+    return await response.json();
   }
 }

@@ -9,6 +9,7 @@ import {
 } from '@backstage/core-components';
 import { KeycloakClientCreator } from './KeycloakClientCreator';
 import { Grid } from '@material-ui/core';
+import { KeycloakMyClients } from './KeycloakMyClients';
 
 export const KeycloakPage = () => {
   return (
@@ -27,6 +28,9 @@ export const KeycloakPage = () => {
         <Grid container spacing={3} direction="column">
           <Grid item>
             <KeycloakClientCreator />
+          </Grid>
+          <Grid item>
+            <KeycloakMyClients />
           </Grid>
         </Grid>
       </Content>

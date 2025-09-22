@@ -1,0 +1,24 @@
+# Backstage override configuration for your local development environment
+# Add any local overrides here
+
+# GitHub OAuth Configuration
+# To set up GitHub authentication:
+# 1. Go to: https://github.com/settings/applications/new
+# 2. Application name: Backstage Local Dev
+# 3. Homepage URL: http://localhost:3000
+# 4. Authorization callback URL: http://localhost:7007/api/auth/github/handler/frame
+# 5. After creating the app, replace the values below with your actual credentials
+# 6. Alternatively, set environment variables AUTH_GITHUB_CLIENT_ID and AUTH_GITHUB_CLIENT_SECRET
+
+auth:
+  providers:
+    github:
+      development:
+        clientId: ${AUTH_GITHUB_CLIENT_ID}
+        clientSecret: ${AUTH_GITHUB_CLIENT_SECRET}
+        # Optional: Request additional scopes
+        additionalScopes:
+          - read:user
+          - user:email
+        # Note: We're using a custom resolver in backend/src/index.ts
+        # No need for built-in resolvers since our custom one handles everything

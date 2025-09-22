@@ -17,12 +17,16 @@ export const keycloakPlugin = createBackendPlugin({
         httpRouter: coreServices.httpRouter,
         logger: coreServices.logger,
         config: coreServices.rootConfig,
+        discovery: coreServices.discovery,
+        database: coreServices.database,
       },
-      async init({ httpRouter, logger, config }) {
+      async init({ httpRouter, logger, config, discovery, database }) {
         httpRouter.use(
           await createRouter({
             logger,
             config,
+            discovery,
+            database,
           }),
         );
         httpRouter.addAuthPolicy({
