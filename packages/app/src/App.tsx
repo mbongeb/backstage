@@ -31,6 +31,7 @@ import {
   SignInPage,
 } from '@backstage/core-components';
 import { createApp } from '@backstage/app-defaults';
+import { githubAuthApiRef } from '@backstage/core-plugin-api';
 import { AppRouter, FlatRoutes } from '@backstage/core-app-api';
 import { CatalogGraphPage } from '@backstage/plugin-catalog-graph';
 import { RequirePermission } from '@backstage/plugin-permission-react';
@@ -59,7 +60,21 @@ const app = createApp({
     });
   },
   components: {
-    SignInPage: props => <SignInPage {...props} auto providers={['guest']} />,
+    // Switch Sign-In to GitHub using the backend resolver; no catalog users required
+    SignInPage: props => (
+      <SignInPage
+        {...props}
+        auto
+        providers={[
+          {
+            id: 'github',
+            title: 'GitHub',
+            message: 'Sign in using your GitHub account',
+            apiRef: githubAuthApiRef,
+          },
+        ]}
+      />
+    ),
   },
 });
 
