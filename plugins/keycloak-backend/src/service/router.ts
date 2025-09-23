@@ -58,6 +58,7 @@ export async function createRouter(
         attributes: {
           ...(clientData.attributes || {}),
           createdBy: creator,
+          createdAt: new Date().toISOString(),
         },
       };
 
@@ -97,6 +98,68 @@ export async function createRouter(
       response.json(clients);
     } catch (error: any) {
       logger.error('Failed to list own clients', error as Error);
+      response.status(500).json({ error: error.message });
+    }
+  });
+
+  // Take ownership of an existing client by clientId or name
+  router.post('/take-ownership', async (request, response) => {
+    const { realm = 'master', clientId, name } = request.body ?? {};
+    if (!clientId && !name) {
+      return response.status(400).json({ error: 'Must provide clientId or name' });
+    }
+    try {
+      const identity = await identityClient.getIdentity({ request });
+      const requester = identity?.identity.userEntityRef || 'unknown';
+
+      // Resolve target client
+      let client: any | undefined;
+      if (clientId) {
+        try {
+          client = await keycloakService.getClient(realm, clientId);
+        } catch (e: any) {
+          return response.status(404).json({ error: `Client with clientId ${clientId} not found in realm ${realm}` });
+        }
+      } else if (name) {
+        const all = await keycloakService.listClients(realm);
+        const matches = (all || []).filter((c: any) => (c?.name || '').trim() === name.trim());
+        if (matches.length === 0) {
+          return response.status(404).json({ error: `No client found with name ${name} in realm ${realm}` });
+        }
+        if (matches.length > 1) {
+          return response.status(409).json({ 
+            error: `Multiple clients found with name ${name} in realm ${realm}; please specify clientId instead`,
+            code: 'AMBIGUOUS_NAME',
+            candidates: matches.map((c: any) => ({ id: c.id, clientId: c.clientId, name: c.name }))
+          });
+        }
+        client = matches[0];
+      }
+
+      if (!client?.id) {
+        return response.status(404).json({ error: 'Target client not resolvable' });
+      }
+
+      const attrs = client.attributes || {};
+      if (attrs.createdBy && attrs.createdBy !== requester) {
+        return response.status(409).json({ error: `Client already owned by ${attrs.createdBy}` });
+      }
+
+      const updated = {
+        ...client,
+        attributes: {
+          ...attrs,
+          createdBy: requester,
+          createdByTag: 'inherited',
+          inheritedBy: requester,
+          inheritedAt: new Date().toISOString(),
+          createdAt: attrs.createdAt || new Date().toISOString(),
+        },
+      };
+      await keycloakService.updateClient(realm, client.id, updated as any);
+      response.json({ message: 'Ownership taken', id: client.id, clientId: client.clientId, name: client.name, attributes: updated.attributes });
+    } catch (error: any) {
+      logger.error('Failed to take ownership', error as Error);
       response.status(500).json({ error: error.message });
     }
   });

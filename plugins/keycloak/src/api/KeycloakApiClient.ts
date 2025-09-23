@@ -21,6 +21,7 @@ export interface KeycloakClient {
   implicitFlowEnabled?: boolean;
   standardFlowEnabled?: boolean;
   realm?: string;
+  attributes?: Record<string, string>;
 }
 
 export interface KeycloakApi {
@@ -33,6 +34,7 @@ export interface KeycloakApi {
   getClientSecret(realm: string, id: string): Promise<string>;
   regenerateClientSecret(realm: string, id: string): Promise<string>;
   deleteClientSecret(realm: string, id: string): Promise<void>;
+  takeOwnership(realm: string, payload: { clientId?: string; name?: string }): Promise<{ message: string; id: string; clientId: string; name?: string; attributes?: Record<string, string> }>;
   listSecretHistory(realm: string, id: string): Promise<{
     id: number; realm: string; client_id: string; created_by: string; action: string; secret_last4: string | null; created_at: string;
   }[]>;
@@ -207,6 +209,27 @@ export class KeycloakApiClient implements KeycloakApi {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to list secret history');
+    }
+    return await response.json();
+  }
+
+  async takeOwnership(realm: string, payload: { clientId?: string; name?: string }) {
+    const baseUrl = await this.getBaseUrl();
+    const response = await this.fetchApi.fetch(`${baseUrl}/take-ownership`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ realm, ...payload }),
+    });
+    if (!response.ok) {
+      let body: any = undefined;
+      try {
+        body = await response.json();
+      } catch {}
+      const err: any = new Error((body && body.error) || 'Failed to take ownership');
+      if (body && typeof body === 'object') {
+        Object.assign(err, body);
+      }
+      throw err;
     }
     return await response.json();
   }
