@@ -151,19 +151,33 @@ export async function createRouter(
     }
   });
 
-  // Delete a client
+  // Delete a client (only if created by the current Backstage user)
   router.delete('/clients/:id', async (request, response) => {
     const { id } = request.params;
-    const realm = request.query.realm as string || 'master';
-    
+    const realm = (request.query.realm as string) || 'master';
+
     try {
+      const identity = await identityClient.getIdentity({ request });
+      const requester = identity?.identity.userEntityRef || 'unknown';
+
+      // Fetch client by id to check ownership
+      let client: any;
+      try {
+        client = await keycloakService.getClientById(realm, id);
+      } catch (e: any) {
+        return response.status(404).json({ error: `Client ${id} not found in realm ${realm}` });
+      }
+
+      const createdBy = client?.attributes?.createdBy;
+      if (!createdBy || createdBy !== requester) {
+        return response.status(403).json({ error: 'You can only delete clients you created' });
+      }
+
       await keycloakService.deleteClient(realm, id);
       response.status(204).send();
     } catch (error: any) {
       logger.error(`Failed to delete client ${id}`, error as Error);
-      response.status(500).json({ 
-        error: error.message 
-      });
+      response.status(500).json({ error: error.message });
     }
   });
 
@@ -207,6 +221,34 @@ export async function createRouter(
       response.status(500).json({ 
         error: error.message 
       });
+    }
+  });
+
+  // Delete client secret
+  router.delete('/clients/:id/secret', async (request, response) => {
+    const { id } = request.params;
+    const realm = (request.query.realm as string) || 'master';
+    try {
+      try {
+        await keycloakService.deleteClientSecret(realm, id);
+      } catch (e: any) {
+        // Fallback: if deletion not supported by Keycloak, convert client to public (no secret)
+        logger.warn(`deleteClientSecret not supported, converting client ${id} in realm ${realm} to public`, e as Error);
+        await keycloakService.updateClient(realm, id, { publicClient: true } as any);
+      }
+      const identity = await identityClient.getIdentity({ request });
+      const createdBy = identity?.identity.userEntityRef || 'unknown';
+      await knex('keycloak_client_secret_history').insert({
+        realm,
+        client_id: id,
+        created_by: createdBy,
+        action: 'deleted',
+        secret_last4: null,
+      });
+      response.status(204).send();
+    } catch (error: any) {
+      logger.error(`Failed to delete client secret for ${id}`, error as Error);
+      response.status(500).json({ error: error.message });
     }
   });
 

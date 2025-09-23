@@ -192,6 +192,20 @@ export class KeycloakService {
     return (clients || []).filter((c: any) => c?.attributes?.createdBy === creator);
   }
 
+  async getClientById(realm: string, id: string): Promise<any> {
+    const token = await this.getAccessToken();
+    try {
+      const url = `${this.config.baseUrl}/admin/realms/${realm}/clients/${id}`;
+      const response = await this.axiosInstance.get(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return response.data;
+    } catch (error: any) {
+      this.logger.error(`Failed to get client by id: ${id}`, error as Error);
+      throw new Error(`Failed to get client by id: ${error.message}`);
+    }
+  }
+
   async updateClient(realm: string, id: string, clientData: Partial<KeycloakClient>): Promise<void> {
     const token = await this.getAccessToken();
     
@@ -261,6 +275,30 @@ export class KeycloakService {
     } catch (error: any) {
       this.logger.error(`Failed to regenerate client secret for: ${id}`, error as Error);
       throw new Error(`Failed to regenerate client secret: ${error.message}`);
+    }
+  }
+
+  async deleteClientSecret(realm: string, id: string): Promise<void> {
+    const token = await this.getAccessToken();
+
+    try {
+      const url = `${this.config.baseUrl}/admin/realms/${realm}/clients/${id}/client-secret`;
+      await this.axiosInstance.delete(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      this.logger.info(`Successfully deleted client secret for: ${id} in realm: ${realm}`);
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 404 || status === 405) {
+        // Most Keycloak versions only support GET and POST (regenerate) for client-secret
+        const msg = 'Keycloak does not support deleting client secrets on this version. Use secret rotation instead.';
+        this.logger.warn(`${msg} (clientId=${id}, realm=${realm})`);
+        throw new Error(msg);
+      }
+      this.logger.error(`Failed to delete client secret for: ${id}`, error as Error);
+      throw new Error(`Failed to delete client secret: ${error.message}`);
     }
   }
 }

@@ -89,6 +89,26 @@ export const KeycloakMyClients = () => {
                     <Button size="small" color="primary" onClick={() => toggleExpand(c.id)}>
                       {expandedId === c.id ? 'Hide' : 'View Secrets'}
                     </Button>
+                    <Button
+                      size="small"
+                      color="secondary"
+                      style={{ marginLeft: 8 }}
+                      onClick={async () => {
+                        if (!c.id) return;
+                        const ok = window.confirm(`Delete client ${c.clientId}? This cannot be undone.`);
+                        if (!ok) return;
+                        try {
+                          await keycloakApi.deleteClient(realm, c.id);
+                          // remove from table
+                          setClients(prev => prev.filter(x => x.id !== c.id));
+                        } catch (e: any) {
+                          setError(e.message ?? 'Failed to delete client');
+                        }
+                      }}
+                      disabled={!c.id}
+                    >
+                      Delete Client
+                    </Button>
                   </TableCell>
                 </TableRow>
                 <TableRow>
@@ -98,6 +118,53 @@ export const KeycloakMyClients = () => {
                         <Typography variant="subtitle2">Current Secret</Typography>
                         <Button size="small" variant="outlined" onClick={() => revealSecret(c.id)}>
                           Reveal Secret
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          style={{ marginLeft: 8 }}
+                          onClick={async () => {
+                            if (!c.id) return;
+                            try {
+                              const newSecret = await keycloakApi.regenerateClientSecret(realm, c.id);
+                              setRevealed(prev => ({ ...prev, [c.id!]: newSecret }));
+                              const rows = await keycloakApi.listSecretHistory(realm, c.id);
+                              setHistory(prev => ({ ...prev, [c.id!]: rows }));
+                            } catch (e: any) {
+                              setError(e.message ?? 'Failed to rotate client secret');
+                            }
+                          }}
+                          disabled={!c.id}
+                        >
+                          Rotate Secret
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="secondary"
+                          style={{ marginLeft: 8 }}
+                          onClick={async () => {
+                            if (!c.id) return;
+                            const ok = window.confirm('Delete client secret? This may not be supported by your Keycloak version. Continue?');
+                            if (!ok) return;
+                            try {
+                              await keycloakApi.deleteClientSecret(realm, c.id);
+                              // Clear revealed secret
+                              setRevealed(prev => {
+                                const next = { ...prev };
+                                delete next[c.id!];
+                                return next;
+                              });
+                              // Refresh history for this client
+                              const rows = await keycloakApi.listSecretHistory(realm, c.id);
+                              setHistory(prev => ({ ...prev, [c.id!]: rows }));
+                            } catch (e: any) {
+                              setError(e.message ?? 'Failed to delete client secret');
+                            }
+                          }}
+                          disabled={!c.id}
+                        >
+                          Delete Secret
                         </Button>
                         {revealed[c.id || ''] && (
                           <Typography variant="body2" style={{ fontFamily: 'monospace', marginLeft: 8 }}>

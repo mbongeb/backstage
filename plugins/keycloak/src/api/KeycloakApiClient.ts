@@ -32,6 +32,7 @@ export interface KeycloakApi {
   deleteClient(realm: string, id: string): Promise<void>;
   getClientSecret(realm: string, id: string): Promise<string>;
   regenerateClientSecret(realm: string, id: string): Promise<string>;
+  deleteClientSecret(realm: string, id: string): Promise<void>;
   listSecretHistory(realm: string, id: string): Promise<{
     id: number; realm: string; client_id: string; created_by: string; action: string; secret_last4: string | null; created_at: string;
   }[]>;
@@ -178,6 +179,24 @@ export class KeycloakApiClient implements KeycloakApi {
 
     const data = await response.json();
     return data.secret;
+  }
+
+  async deleteClientSecret(realm: string, id: string): Promise<void> {
+    const baseUrl = await this.getBaseUrl();
+    const response = await this.fetchApi.fetch(
+      `${baseUrl}/clients/${id}/secret?realm=${realm}`,
+      {
+        method: 'DELETE',
+      },
+    );
+    if (!response.ok && response.status !== 204) {
+      let message = 'Failed to delete client secret';
+      try {
+        const error = await response.json();
+        message = error.error || message;
+      } catch {}
+      throw new Error(message);
+    }
   }
 
   async listSecretHistory(realm: string, id: string) {

@@ -76,8 +76,8 @@ auth:
     # GitHub OAuth provider; credentials are set via env in app-config.local.yaml for local dev
     github:
       development:
-        clientId:
-        clientSecret:
+        clientId: Ov23li1i5DtpLIPvAJLl
+        clientSecret: 900029babf9f7d757f68274a588b170fa1c78bdb
         additionalScopes:
           - read:user
           - user:email
