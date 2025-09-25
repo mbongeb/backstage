@@ -22,3 +22,33 @@ auth:
           - user:email
         # Note: We're using a custom resolver in backend/src/index.ts
         # No need for built-in resolvers since our custom one handles everything
+
+# Local overrides: point Backstage Keycloak plugin to remote Keycloak
+# Do NOT commit secrets; provide them via environment variables.
+
+keycloak:
+  # Choose profile with env var, defaults to remote-user
+  activeProfile: ${KEYCLOAK_PROFILE:remote-user}
+  profiles:
+    # Remote Keycloak using a real user (password grant)
+    remote-user:
+      baseUrl: https://keycloak-test.cyber.npr-plscyb.asgard.capi/auth
+      realm: master
+      clientId: admin-cli
+      username: ${KEYCLOAK_USERNAME}
+      password: ${KEYCLOAK_PASSWORD}
+
+    # Remote Keycloak using a service account (client credentials grant)
+    remote-service:
+      baseUrl: https://keycloak-test.cyber.npr-plscyb.asgard.capi/auth
+      realm: master
+      clientId: sauron
+      clientSecret: ${KEYCLOAK_CLIENT_SECRET}
+
+    # Local development Keycloak
+    local:
+      baseUrl: http://localhost:8080
+      realm: master
+      clientId: admin-cli
+      username: admin
+      password: admin
