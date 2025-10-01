@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useApi, identityApiRef } from '@backstage/core-plugin-api';
 import { keycloakApiRef, KeycloakClient } from '../api';
-import { Content, ContentHeader, Progress, WarningPanel } from '@backstage/core-components';
+import { ContentHeader, Progress, WarningPanel } from '@backstage/core-components';
 import { Table, TableBody, TableCell, TableHead, TableRow, Paper, Typography, Button, Collapse, Box, TextField, Chip, Tooltip } from '@material-ui/core';
 import InfoOutlinedIcon from '@material-ui/icons/InfoOutlined';
 

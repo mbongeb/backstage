@@ -30,10 +30,11 @@ export const githubAuthModule = createBackendModule({
               const { profile } = info;
 
               // Prefer GitHub display name for identity; fallback to username/login
+              const profileAny = profile as any;
               const base =
                 profile.displayName?.toString() ||
-                profile.username?.toString() ||
-                profile.login?.toString();
+                profileAny.username?.toString() ||
+                profileAny.login?.toString();
 
               if (!base) {
                 throw new Error(
@@ -55,11 +56,14 @@ export const githubAuthModule = createBackendModule({
                 namespace: DEFAULT_NAMESPACE,
               });
 
-              ctx.logger.info('GitHub user sign-in success', {
-                userEntityRef,
-                email: profile.email || 'no email',
-                displayName: profile.displayName || base,
-              });
+              const ctxAny = ctx as any;
+              if (ctxAny.logger) {
+                ctxAny.logger.info('GitHub user sign-in success', {
+                  userEntityRef,
+                  email: profile.email || 'no email',
+                  displayName: profile.displayName || base,
+                });
+              }
 
               // Allow sign-in without requiring a catalog User entity
               return ctx.issueToken({
